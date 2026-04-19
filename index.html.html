@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Financiero · Área Microservicios</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f5f4f1; --surface:#fff; --surface2:#faf9f7;
+  --border:#e8e5df; --border2:#d8d4cc;
+  --t1:#1a1916; --t2:#6b6860; --t3:#a09d97;
+  --accent:#2563eb; --accent-lt:#eff4ff;
+  --green:#16a34a; --green-lt:#f0fdf4;
+  --red:#dc2626; --red-lt:#fef2f2;
+  --amber:#d97706; --amber-lt:#fffbeb;
+  --r:10px; --rl:16px;
+  --shadow:0 1px 3px rgba(0,0,0,.06);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --font:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
+}
+body { font-family:var(--font); background:var(--bg); color:var(--t1); font-size:14px; line-height:1.5; min-height:100vh; }
+
+/* ── LAYOUT ── */
+.page { display:grid; grid-template-columns:260px 1fr; min-height:100vh; }
+@media(max-width:900px){ .page { grid-template-columns:1fr; } }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column;
+  position:sticky; top:0; height:100vh;
+  overflow:hidden;
+}
+.sb-header {
+  padding:20px 16px 12px;
+  border-bottom:1px solid var(--border);
+}
+.sb-logo { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.sb-logomark { width:30px; height:30px; background:var(--accent); border-radius:7px; display:flex; align-items:center; justify-content:center; }
+.sb-logomark svg { width:14px; height:14px; fill:#fff; }
+.sb-title { font-size:13px; font-weight:600; }
+.sb-sub { font-size:11px; color:var(--t3); }
+.sb-section { font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--t3); margin-bottom:8px; }
+.sb-search {
+  width:100%; padding:8px 10px;
+  border:1px solid var(--border); border-radius:8px;
+  font-family:var(--font); font-size:12px; color:var(--t1);
+  background:var(--surface2); outline:none;
+  transition:border-color .15s;
+}
+.sb-search:focus { border-color:var(--accent); }
+.sb-search::placeholder { color:var(--t3); }
+
+.sb-actions {
+  display:flex; gap:6px; padding:10px 16px;
+  border-bottom:1px solid var(--border);
+}
+.sb-action-btn {
+  font-family:var(--font); font-size:11px; font-weight:500;
+  background:transparent; border:1px solid var(--border); border-radius:6px;
+  padding:4px 10px; cursor:pointer; color:var(--t2); transition:all .12s; flex:1; text-align:center;
+}
+.sb-action-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+.sb-list { flex:1; overflow-y:auto; padding:8px 0; }
+.sb-item {
+  display:flex; align-items:center; gap:8px;
+  padding:7px 16px; cursor:pointer; transition:background .12s;
+  border-bottom:.5px solid transparent;
+}
+.sb-item:hover { background:var(--surface2); }
+.sb-item.checked { background:var(--accent-lt); }
+.sb-item input[type=checkbox] { cursor:pointer; accent-color:var(--accent); flex-shrink:0; width:13px; height:13px; }
+.sb-item-name { font-size:11px; color:var(--t1); flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sb-item-ing { font-size:10px; color:var(--t3); font-family:var(--mono); flex-shrink:0; }
+.sb-footer { padding:10px 16px; border-top:1px solid var(--border); font-size:10px; color:var(--t3); }
+.sb-selected-count { font-weight:600; color:var(--accent); }
+
+/* ── MAIN ── */
+.main { padding:0 28px 60px; overflow-x:hidden; }
+
+/* ── TOPBAR ── */
+.topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:20px 0 22px; border-bottom:1px solid var(--border); margin-bottom:24px;
+}
+.topbar-info { display:flex; flex-direction:column; }
+.topbar-title { font-size:15px; font-weight:600; letter-spacing:-.01em; }
+.topbar-sub { font-size:11px; color:var(--t3); margin-top:2px; }
+.topbar-right { display:flex; align-items:center; gap:8px; }
+.badge { font-size:11px; padding:4px 10px; border:1px solid var(--border); border-radius:20px; color:var(--t2); }
+
+/* ── KPI BLOCK ── */
+.kpi-block {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--rl); padding:18px 20px 20px;
+  box-shadow:var(--shadow); margin-bottom:20px;
+}
+.mes-wrap { display:flex; align-items:center; gap:12px; margin-bottom:14px; padding-bottom:12px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+.mes-label { font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--t3); white-space:nowrap; }
+.mes-btns { display:flex; gap:4px; flex-wrap:wrap; }
+.mes-btn {
+  font-family:var(--font); font-size:11px; font-weight:500;
+  background:transparent; border:1px solid var(--border2); border-radius:6px;
+  padding:4px 11px; cursor:pointer; color:var(--t2); transition:all .12s;
+}
+.mes-btn:hover { border-color:var(--accent); color:var(--accent); }
+.mes-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+.mes-btn.special { border-style:dashed; }
+.mes-btn.special.active { background:var(--t1); border-color:var(--t1); border-style:solid; color:#fff; }
+.mes-btn.avg-btn { border-color:var(--amber); color:var(--amber); }
+.mes-btn.avg-btn.active { background:var(--amber); border-color:var(--amber); color:#fff; border-style:solid; }
+
+/* EVOL STRIP */
+.evol-wrap { margin-bottom:16px; overflow-x:auto; }
+.evol-table { width:100%; border-collapse:separate; border-spacing:0; min-width:380px; }
+.evol-table thead th { font-size:10px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--t3); padding:0 2px 6px; text-align:center; }
+.evol-table thead th:first-child { text-align:left; width:80px; }
+.evol-table tbody tr { border:none; cursor:default; }
+.evol-table tbody tr:hover { background:transparent; }
+.evol-table tbody td { padding:2px; vertical-align:middle; }
+.evol-table tbody td:first-child { font-size:10px; font-weight:600; color:var(--t2); text-transform:uppercase; letter-spacing:.04em; padding-right:8px; white-space:nowrap; }
+.ecell { display:flex; flex-direction:column; align-items:center; padding:7px 5px; border-radius:6px; cursor:pointer; border:1px solid transparent; min-width:56px; transition:all .12s; }
+.ecell:hover { border-color:var(--border2); background:var(--surface2); }
+.ecell.act { background:var(--accent-lt); border-color:var(--accent); }
+.ecell.spc { border-style:dashed; border-color:var(--border2); }
+.ecell.spc.act { border-style:dashed; border-color:var(--t1); background:var(--surface2); }
+.ecell.avgt { border-color:var(--amber); }
+.ecell.avgt.act { background:var(--amber-lt); border-color:var(--amber); }
+.epct { font-size:13px; font-weight:500; font-family:var(--mono); line-height:1; }
+.epct.up { color:var(--green); } .epct.dn { color:var(--red); } .epct.nu { color:var(--t3); }
+.esub { font-size:9px; color:var(--t3); margin-top:2px; text-transform:uppercase; letter-spacing:.03em; }
+.ediff { font-size:11px; font-weight:500; font-family:var(--mono); padding:3px 7px; border-radius:5px; display:inline-block; cursor:pointer; }
+.ediff.pos { background:var(--green-lt); color:var(--green); }
+.ediff.neg { background:var(--red-lt); color:var(--red); }
+.ediff.zero { background:var(--surface2); color:var(--t3); }
+.edivider td { padding:2px 0 !important; }
+.edivline { height:1px; background:var(--border); }
+
+/* KPI CARDS */
+.kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+@media(max-width:1100px){ .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+.kpi-card { background:var(--surface2); border:1px solid var(--border); border-radius:var(--r); padding:14px 16px; position:relative; overflow:hidden; }
+.kpi-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:3px 0 0 3px; }
+.c-ing::before { background:var(--accent); }
+.c-gas::before { background:#94a3b8; }
+.c-mrg::before { background:var(--green); }
+.c-rnt::before { background:var(--amber); }
+.kpi-lbl { font-size:10px; font-weight:500; color:var(--t3); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+.kpi-val { font-size:22px; font-weight:600; letter-spacing:-.04em; line-height:1; margin-bottom:8px; font-family:var(--mono); }
+.kpi-sep { height:1px; background:var(--border); margin-bottom:6px; }
+.kpi-vs { display:flex; align-items:center; justify-content:space-between; gap:4px; }
+.kpi-vs-lbl { font-size:10px; color:var(--t3); font-family:var(--mono); }
+.kpi-badge { display:inline-flex; align-items:center; gap:2px; font-size:10px; font-weight:500; padding:2px 6px; border-radius:20px; }
+.kpi-badge.up { background:var(--green-lt); color:var(--green); }
+.kpi-badge.dn { background:var(--red-lt); color:var(--red); }
+.kpi-badge.nu { background:var(--surface2); color:var(--t3); border:1px solid var(--border); }
+
+/* FILTER BAR */
+.filter-bar { display:flex; align-items:center; gap:6px; margin-bottom:18px; flex-wrap:wrap; }
+.filter-info { font-size:11px; color:var(--t3); font-style:italic; }
+
+/* CHARTS */
+.charts-row { display:grid; grid-template-columns:2fr 1fr; gap:14px; margin-bottom:20px; }
+@media(max-width:900px){ .charts-row { grid-template-columns:1fr; } }
+.chart-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--rl); padding:18px 20px; box-shadow:var(--shadow); }
+.chart-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.chart-ttl { font-size:12px; font-weight:600; }
+.legend { display:flex; gap:10px; font-size:10px; color:var(--t3); }
+.ldot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:3px; vertical-align:middle; }
+.chart-wrap { position:relative; height:200px; }
+
+/* TABLE */
+.tbl-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--rl); overflow:hidden; box-shadow:var(--shadow); margin-bottom:24px; }
+.tbl-hdr { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-bottom:1px solid var(--border); }
+.tbl-ttl { font-size:12px; font-weight:600; }
+table { width:100%; border-collapse:collapse; }
+thead th { font-size:10px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.04em; padding:8px 16px; text-align:left; background:var(--surface2); border-bottom:1px solid var(--border); white-space:nowrap; }
+thead th:not(:first-child) { text-align:right; }
+tbody tr { border-bottom:1px solid var(--border); cursor:pointer; transition:background .1s; }
+tbody tr:last-child { border-bottom:none; }
+tbody tr:hover { background:var(--surface2); }
+tbody tr.exp { background:var(--accent-lt); }
+tbody td { padding:11px 16px; font-size:12px; vertical-align:middle; }
+tbody td:not(:first-child) { text-align:right; font-family:var(--mono); }
+.gname { display:flex; align-items:center; gap:8px; font-weight:600; }
+.gicon { width:24px; height:24px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:600; flex-shrink:0; }
+.chev { margin-left:auto; color:var(--t3); transition:transform .18s; font-size:9px; font-style:normal; }
+.chev.open { transform:rotate(90deg); }
+.pill { display:inline-block; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:600; font-family:var(--mono); }
+.pill.hi { background:var(--green-lt); color:var(--green); }
+.pill.md { background:var(--amber-lt); color:var(--amber); }
+.pill.lo { background:var(--red-lt); color:var(--red); }
+.dlt { font-size:11px; font-weight:500; font-family:var(--mono); }
+.dlt.up { color:var(--green); } .dlt.dn { color:var(--red); }
+.proj-row { display:none; }
+.proj-row.open { display:table-row; }
+.proj-cell { padding:0 !important; background:var(--surface2) !important; cursor:default !important; }
+.proj-inner { padding:12px 16px 14px 46px; border-top:1px solid var(--border); }
+.proj-lbl { font-size:10px; font-weight:600; color:var(--t3); text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px; }
+.proj-code { font-family:var(--mono); font-size:10px; color:var(--t3); }
+.proj-name { font-size:11px; font-weight:500; }
+
+.tbl-mes-bar { display:flex; gap:4px; }
+.tbl-mes-btn {
+  font-family:var(--font); font-size:11px; font-weight:500;
+  background:transparent; border:1px solid var(--border2); border-radius:6px;
+  padding:4px 10px; cursor:pointer; color:var(--t2); transition:all .12s;
+}
+.tbl-mes-btn:hover { border-color:var(--accent); color:var(--accent); }
+.tbl-mes-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.tbl-mes-btn.tot { border-style:dashed; }
+.tbl-mes-btn.tot.active { background:var(--t1); border-color:var(--t1); border-style:solid; color:#fff; }
+.tbl-filter-btn {
+  font-family:var(--font); font-size:11px; font-weight:500;
+  background:transparent; border:1px solid var(--border2); border-radius:6px;
+  padding:4px 10px; cursor:pointer; color:var(--t2); transition:all .12s;
+}
+.tbl-filter-btn:hover { border-color:var(--accent); color:var(--accent); }
+.tbl-filter-btn.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+.tbl-filter-btn#fPos.active { background:var(--green); border-color:var(--green); }
+.tbl-filter-btn#fNeg.active { background:var(--red); border-color:var(--red); }
+thead th.sortable { cursor:pointer; user-select:none; white-space:nowrap; }
+thead th.sortable:hover { color:var(--accent); }
+thead th.sort-active { color:var(--accent); }
+.sort-icon { font-size:9px; margin-left:2px; }
+
+.footer { padding-top:16px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:10px; color:var(--t3); }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-header">
+      <div class="sb-logo">
+        <div class="sb-logomark"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zm11 0h7v7h-7zM3 14h7v7H3zm14 3a3 3 0 110-6 3 3 0 010 6z"/></svg></div>
+        <div><div class="sb-title">Microservicios</div><div class="sb-sub">Ene–Mar 2026</div></div>
+      </div>
+      <div class="sb-section">Clientes</div>
+      <input type="text" id="sbSearch" class="sb-search" placeholder="Buscar cliente...">
+    </div>
+    <div class="sb-actions">
+      <button class="sb-action-btn" onclick="selectAll()">Todos</button>
+      <button class="sb-action-btn" onclick="selectNone()">Ninguno</button>
+    </div>
+    <div class="sb-list" id="sbList"></div>
+    <div class="sb-footer">
+      <span id="sbCount" class="sb-selected-count">0</span> clientes seleccionados
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <div class="topbar">
+      <div class="topbar-info">
+        <div class="topbar-title">Analítica Financiera · Área de Negocio</div>
+        <div class="topbar-sub">Vista ejecutiva · Datos reales · Ene–Mar 2026</div>
+      </div>
+      <div class="topbar-right">
+        <span class="badge" id="activeFilter">Todos los clientes</span>
+      </div>
+    </div>
+
+    <!-- KPI BLOCK -->
+    <div class="kpi-block">
+      <div class="mes-wrap">
+        <span class="mes-label">Periodo</span>
+        <div class="mes-btns" id="mesSelector"></div>
+      </div>
+      <div class="evol-wrap"><div id="evolStrip"></div></div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-hdr">
+          <span class="chart-ttl">Evolución mensual · Ingresos vs Gastos vs Margen</span>
+          <div class="legend">
+            <span><span class="ldot" style="background:#2563eb"></span>Ingresos</span>
+            <span><span class="ldot" style="background:#94a3b8"></span>Gastos</span>
+            <span><span class="ldot" style="background:#16a34a"></span>Margen</span>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-hdr"><span class="chart-ttl">Rentabilidad global</span></div>
+        <div class="chart-wrap" style="display:flex;align-items:center;justify-content:center;position:relative">
+          <canvas id="donutChart" style="max-height:190px;max-width:190px"></canvas>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
+            <div style="font-size:24px;font-weight:600;font-family:var(--mono)" id="donutPct"></div>
+            <div style="font-size:10px;color:var(--t3);margin-top:2px">margen neto</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="tbl-card">
+      <div class="tbl-hdr" style="flex-direction:column;align-items:flex-start;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%;flex-wrap:wrap;gap:8px">
+          <span class="tbl-ttl">Grupos de cliente</span>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <!-- Mes de la tabla -->
+            <div class="tbl-mes-bar" id="tblMesBar"></div>
+            <!-- Filtro positivo/negativo -->
+            <div style="display:flex;gap:4px">
+              <button class="tbl-filter-btn active" id="fAll"   onclick="setMargenFilter('all')">Todos</button>
+              <button class="tbl-filter-btn"        id="fPos"   onclick="setMargenFilter('pos')">✓ Positivos</button>
+              <button class="tbl-filter-btn"        id="fNeg"   onclick="setMargenFilter('neg')">✗ Negativos</button>
+            </div>
+          </div>
+        </div>
+        <!-- Filtro HBU -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%">
+          <span style="font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--t3);white-space:nowrap">HBU</span>
+          <div class="tbl-mes-bar" id="hbuBar"></div>
+        </div>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Grupo</th>
+          <th class="sortable" onclick="setSort('i')"  id="sh-i">Ingresos <span class="sort-icon" id="si-i"></span></th>
+          <th class="sortable" onclick="setSort('gs')" id="sh-gs">Gastos <span class="sort-icon" id="si-gs"></span></th>
+          <th class="sortable" onclick="setSort('m')"  id="sh-m">Margen <span class="sort-icon" id="si-m"></span></th>
+          <th class="sortable" onclick="setSort('r')"  id="sh-r">Rent.% <span class="sort-icon" id="si-r"></span></th>
+          <th class="sortable" onclick="setSort('ev')" id="sh-ev">Evol. <span class="sort-icon" id="si-ev"></span></th>
+        </tr></thead>
+        <tbody id="groupBody"></tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      <span>Dashboard Financiero v2.0 · Datos reales · Área Microservicios Ene–Mar 2026</span>
+      <span>Próximo paso: integración en proyecto maestro con 5 dashboards</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════ 1. DATOS ═══════════════ */
+const RAW_DATA = [
+  { grupo:"Anysolution", codProyecto:"2025-32172", proyecto:"Deploytur", mes:"2026-01", ingresos:8284.0, gastos:6244.09 },
+  { grupo:"Anysolution", codProyecto:"2025-32172", proyecto:"Deploytur", mes:"2026-02", ingresos:17484.0, gastos:12202.55 },
+  { grupo:"Anysolution", codProyecto:"2025-32172", proyecto:"Deploytur", mes:"2026-03", ingresos:18743.0, gastos:12379.78 },
+  { grupo:"Clientes Smb", codProyecto:"2024-26144", proyecto:"Asp Integraopciones", mes:"2026-02", ingresos:0, gastos:63.12 },
+  { grupo:"Clientes Smb", codProyecto:"2024-26144", proyecto:"Asp Integraopciones", mes:"2026-03", ingresos:0, gastos:63.12 },
+  { grupo:"Clientes Smb", codProyecto:"2024-29981", proyecto:"Banco Pichincha Ia", mes:"2026-01", ingresos:0, gastos:11.93 },
+  { grupo:"Clientes Smb", codProyecto:"2024-29981", proyecto:"Banco Pichincha Ia", mes:"2026-02", ingresos:0, gastos:22.24 },
+  { grupo:"Clientes Smb", codProyecto:"2024-29981", proyecto:"Banco Pichincha Ia", mes:"2026-03", ingresos:0, gastos:22.24 },
+  { grupo:"Clientes Smb", codProyecto:"2024-30247", proyecto:"Asp Integraopciones II", mes:"2026-01", ingresos:0.0, gastos:55.29 },
+  { grupo:"Clientes Smb", codProyecto:"2024-30247", proyecto:"Asp Integraopciones II", mes:"2026-02", ingresos:0.0, gastos:168.17 },
+  { grupo:"Clientes Smb", codProyecto:"2024-30247", proyecto:"Asp Integraopciones II", mes:"2026-03", ingresos:27468.0, gastos:171.93 },
+  { grupo:"Clientes Smb", codProyecto:"2025-31432", proyecto:"Gestión Residencias Hermanitas", mes:"2026-01", ingresos:10260.0, gastos:6003.59 },
+  { grupo:"Clientes Smb", codProyecto:"2025-31432", proyecto:"Gestión Residencias Hermanitas", mes:"2026-02", ingresos:14022.0, gastos:7664.12 },
+  { grupo:"Clientes Smb", codProyecto:"2025-31432", proyecto:"Gestión Residencias Hermanitas", mes:"2026-03", ingresos:15314.0, gastos:8613.73 },
+  { grupo:"Clientes Smb", codProyecto:"2025-34184", proyecto:"Profesionales Adic", mes:"2026-01", ingresos:17305.0, gastos:13986.46 },
+  { grupo:"Clientes Smb", codProyecto:"2025-34184", proyecto:"Profesionales Adic", mes:"2026-02", ingresos:19824.5, gastos:13287.7 },
+  { grupo:"Clientes Smb", codProyecto:"2025-34184", proyecto:"Profesionales Adic", mes:"2026-03", ingresos:21560.25, gastos:13048.77 },
+  { grupo:"Clientes Smb", codProyecto:"2025-35086", proyecto:"Asistencia Técnica Bnd - Ingesa", mes:"2026-01", ingresos:23302.35, gastos:10105.43 },
+  { grupo:"Clientes Smb", codProyecto:"2025-35086", proyecto:"Asistencia Técnica Bnd - Ingesa", mes:"2026-02", ingresos:27457.5, gastos:22103.34 },
+  { grupo:"Clientes Smb", codProyecto:"2025-35086", proyecto:"Asistencia Técnica Bnd - Ingesa", mes:"2026-03", ingresos:25409.5, gastos:20299.67 },
+  { grupo:"Clientes Smb", codProyecto:"2026-36700", proyecto:"Ymca", mes:"2026-01", ingresos:4000.0, gastos:5062.34 },
+  { grupo:"Clientes Smb", codProyecto:"2026-36700", proyecto:"Ymca", mes:"2026-02", ingresos:8148.4, gastos:0.0 },
+  { grupo:"Clientes Smb", codProyecto:"2026-37237", proyecto:"Upgrade Kepler - Copernicus", mes:"2026-02", ingresos:6762.5, gastos:2325.13 },
+  { grupo:"Clientes Smb", codProyecto:"2026-37237", proyecto:"Upgrade Kepler - Copernicus", mes:"2026-03", ingresos:20298.85, gastos:16787.55 },
+  { grupo:"Clientes Smb", codProyecto:"2026-37814", proyecto:"Prosegur Crypto - Squad", mes:"2026-03", ingresos:3087.5, gastos:3537.73 },
+  { grupo:"Grupo Age", codProyecto:"2023-20667", proyecto:"Carpeta Justicia Ineco", mes:"2026-01", ingresos:7227.5, gastos:5619.78 },
+  { grupo:"Grupo Age", codProyecto:"2023-20667", proyecto:"Carpeta Justicia Ineco", mes:"2026-02", ingresos:10640.0, gastos:7402.42 },
+  { grupo:"Grupo Age", codProyecto:"2023-20667", proyecto:"Carpeta Justicia Ineco", mes:"2026-03", ingresos:11935.0, gastos:8395.17 },
+  { grupo:"Grupo Banca March", codProyecto:"2026-37277", proyecto:"Banca March Asistencia Técnica", mes:"2026-02", ingresos:0.0, gastos:3319.64 },
+  { grupo:"Grupo Banca March", codProyecto:"2026-37277", proyecto:"Banca March Asistencia Técnica", mes:"2026-03", ingresos:3017.54, gastos:6194.84 },
+  { grupo:"Grupo Barcelo Avoris", codProyecto:"2025-34433", proyecto:"Barceló Npack - Microservicios", mes:"2026-01", ingresos:4851.0, gastos:2930.85 },
+  { grupo:"Grupo Barcelo Avoris", codProyecto:"2025-34433", proyecto:"Barceló Npack - Microservicios", mes:"2026-02", ingresos:5181.0, gastos:3122.81 },
+  { grupo:"Grupo Barcelo Avoris", codProyecto:"2025-34433", proyecto:"Barceló Npack - Microservicios", mes:"2026-03", ingresos:7722.5, gastos:4180.25 },
+  { grupo:"Grupo Bsh", codProyecto:"2023-19282", proyecto:"Bsh - Retail", mes:"2026-01", ingresos:38161.85, gastos:25618.97 },
+  { grupo:"Grupo Bsh", codProyecto:"2023-19282", proyecto:"Bsh - Retail", mes:"2026-02", ingresos:53857.6, gastos:34548.07 },
+  { grupo:"Grupo Bsh", codProyecto:"2023-19282", proyecto:"Bsh - Retail", mes:"2026-03", ingresos:57196.0, gastos:34706.83 },
+  { grupo:"Grupo Bsh", codProyecto:"2025-33025", proyecto:"Home-connect Firmware", mes:"2026-01", ingresos:22750.3, gastos:11728.72 },
+  { grupo:"Grupo Bsh", codProyecto:"2025-33025", proyecto:"Home-connect Firmware", mes:"2026-02", ingresos:30471.6, gastos:15445.68 },
+  { grupo:"Grupo Bsh", codProyecto:"2025-33025", proyecto:"Home-connect Firmware", mes:"2026-03", ingresos:25352.8, gastos:14882.64 },
+  { grupo:"Grupo Carreras", codProyecto:"2025-34932", proyecto:"Carreras - Proyecto Cometbo", mes:"2026-01", ingresos:23813.07, gastos:10847.81 },
+  { grupo:"Grupo Carreras", codProyecto:"2025-34932", proyecto:"Carreras - Proyecto Cometbo", mes:"2026-02", ingresos:29286.46, gastos:10173.68 },
+  { grupo:"Grupo Carreras", codProyecto:"2025-34932", proyecto:"Carreras - Proyecto Cometbo", mes:"2026-03", ingresos:28108.35, gastos:12761.02 },
+  { grupo:"Grupo Carreras", codProyecto:"2025-35694", proyecto:"AMS Java Migración Carreras", mes:"2026-01", ingresos:4998.0, gastos:2849.15 },
+  { grupo:"Grupo Carreras", codProyecto:"2025-35694", proyecto:"AMS Java Migración Carreras", mes:"2026-02", ingresos:3604.0, gastos:2035.69 },
+  { grupo:"Grupo Carreras", codProyecto:"2025-35694", proyecto:"AMS Java Migración Carreras", mes:"2026-03", ingresos:4760.0, gastos:2849.91 },
+  { grupo:"Grupo Cirsa", codProyecto:"2025-34924", proyecto:"AT - Sportium", mes:"2026-02", ingresos:3703.12, gastos:7604.88 },
+  { grupo:"Grupo Cirsa", codProyecto:"2025-34924", proyecto:"AT - Sportium", mes:"2026-03", ingresos:13019.48, gastos:10035.1 },
+  { grupo:"Grupo Comunidad De Madrid", codProyecto:"2026-36486", proyecto:"Madrid Digital - Factoría APIs", mes:"2026-02", ingresos:3470.0, gastos:2161.68 },
+  { grupo:"Grupo Comunidad De Madrid", codProyecto:"2026-36486", proyecto:"Madrid Digital - Factoría APIs", mes:"2026-03", ingresos:13362.5, gastos:9105.11 },
+  { grupo:"Grupo Consum", codProyecto:"2026-36435", proyecto:"Consum - Servicio Arquitectura", mes:"2026-02", ingresos:17066.26, gastos:6842.44 },
+  { grupo:"Grupo Consum", codProyecto:"2026-36435", proyecto:"Consum - Servicio Arquitectura", mes:"2026-03", ingresos:23144.69, gastos:11089.37 },
+  { grupo:"Grupo Eedd Porcino", codProyecto:"2025-33683", proyecto:"Eedd Porcino Plataforma E", mes:"2026-01", ingresos:53918.76, gastos:55927.78 },
+  { grupo:"Grupo Eedd Porcino", codProyecto:"2025-33683", proyecto:"Eedd Porcino Plataforma E", mes:"2026-02", ingresos:62284.69, gastos:67791.79 },
+  { grupo:"Grupo Eedd Porcino", codProyecto:"2025-33683", proyecto:"Eedd Porcino Plataforma E", mes:"2026-03", ingresos:60302.19, gastos:68694.99 },
+  { grupo:"Grupo Eedd Porcino", codProyecto:"2025-34749", proyecto:"Eedd Porcino Conectores", mes:"2026-02", ingresos:36949.78, gastos:14658.67 },
+  { grupo:"Grupo Eedd Porcino", codProyecto:"2025-35117", proyecto:"Eedd Porcino Plataforma I", mes:"2026-01", ingresos:18810.94, gastos:10021.98 },
+  { grupo:"Grupo Eedd Porcino", codProyecto:"2025-35117", proyecto:"Eedd Porcino Plataforma I", mes:"2026-02", ingresos:22559.45, gastos:26505.11 },
+  { grupo:"Grupo Eedd Porcino", codProyecto:"2025-35117", proyecto:"Eedd Porcino Plataforma I", mes:"2026-03", ingresos:11635.41, gastos:14026.76 },
+  { grupo:"Grupo El Corte Ingles", codProyecto:"2026-36781", proyecto:"ECI Admira", mes:"2026-01", ingresos:242563.44, gastos:250894.76 },
+  { grupo:"Grupo El Corte Ingles", codProyecto:"2026-36781", proyecto:"ECI Admira", mes:"2026-02", ingresos:836234.78, gastos:293791.56 },
+  { grupo:"Grupo El Corte Ingles", codProyecto:"2026-36781", proyecto:"ECI Admira", mes:"2026-03", ingresos:588312.46, gastos:328188.24 },
+  { grupo:"Grupo Ferrovial", codProyecto:"2025-33295", proyecto:"Ferrovial - Autopistas EEUU", mes:"2026-01", ingresos:45945.0, gastos:31935.45 },
+  { grupo:"Grupo Ferrovial", codProyecto:"2025-33295", proyecto:"Ferrovial - Autopistas EEUU", mes:"2026-02", ingresos:49693.0, gastos:35037.91 },
+  { grupo:"Grupo Ferrovial", codProyecto:"2025-33295", proyecto:"Ferrovial - Autopistas EEUU", mes:"2026-03", ingresos:52964.5, gastos:35180.73 },
+  { grupo:"Grupo Ferrovial", codProyecto:"2026-36841", proyecto:"Ferrovial - Migración Con IA", mes:"2026-02", ingresos:9258.08, gastos:1128.65 },
+  { grupo:"Grupo Ferrovial", codProyecto:"2026-36841", proyecto:"Ferrovial - Migración Con IA", mes:"2026-03", ingresos:9141.92, gastos:9134.92 },
+  { grupo:"Grupo Gobierno De Aragon", codProyecto:"2026-37052", proyecto:"GA - Sanidad - Hit", mes:"2026-02", ingresos:3002.86, gastos:3082.68 },
+  { grupo:"Grupo Gobierno De Aragon", codProyecto:"2026-37052", proyecto:"GA - Sanidad - Hit", mes:"2026-03", ingresos:3279.77, gastos:1482.79 },
+  { grupo:"Grupo Gobierno De Navarra", codProyecto:"2025-36024", proyecto:"Telemonitorización Vitio", mes:"2026-01", ingresos:7245.0, gastos:6889.71 },
+  { grupo:"Grupo Gobierno De Navarra", codProyecto:"2025-36024", proyecto:"Telemonitorización Vitio", mes:"2026-02", ingresos:7380.0, gastos:5061.79 },
+  { grupo:"Grupo Gobierno De Navarra", codProyecto:"2025-36024", proyecto:"Telemonitorización Vitio", mes:"2026-03", ingresos:8145.0, gastos:5061.79 },
+  { grupo:"Grupo Gobierno De Navarra", codProyecto:"2026-36410", proyecto:"GN - Soporte Tecnológico", mes:"2026-01", ingresos:3816.0, gastos:2782.87 },
+  { grupo:"Grupo Gobierno De Navarra", codProyecto:"2026-36410", proyecto:"GN - Soporte Tecnológico", mes:"2026-02", ingresos:5472.0, gastos:3838.63 },
+  { grupo:"Grupo Gobierno De Navarra", codProyecto:"2026-36410", proyecto:"GN - Soporte Tecnológico", mes:"2026-03", ingresos:6192.0, gastos:4030.67 },
+  { grupo:"Grupo Gobierno Vasco", codProyecto:"2023-22244", proyecto:"Toolkit Formularios (Platea)", mes:"2026-01", ingresos:60490.82, gastos:55889.75 },
+  { grupo:"Grupo Gobierno Vasco", codProyecto:"2023-22244", proyecto:"Toolkit Formularios (Platea)", mes:"2026-02", ingresos:66879.84, gastos:59785.93 },
+  { grupo:"Grupo Gobierno Vasco", codProyecto:"2023-22244", proyecto:"Toolkit Formularios (Platea)", mes:"2026-03", ingresos:64713.32, gastos:53258.98 },
+  { grupo:"Grupo Gobierno Vasco", codProyecto:"2026-36957", proyecto:"IKT - Izfe - Firma", mes:"2026-03", ingresos:2560.0, gastos:766.01 },
+  { grupo:"Grupo Ibercaja", codProyecto:"2025-35203", proyecto:"Ibercaja Equipo Bambú", mes:"2026-01", ingresos:51738.0, gastos:37228.94 },
+  { grupo:"Grupo Ibercaja", codProyecto:"2025-35203", proyecto:"Ibercaja Equipo Bambú", mes:"2026-02", ingresos:66550.0, gastos:46781.55 },
+  { grupo:"Grupo Ibercaja", codProyecto:"2025-35203", proyecto:"Ibercaja Equipo Bambú", mes:"2026-03", ingresos:75546.0, gastos:49724.74 },
+  { grupo:"Grupo Ibercaja", codProyecto:"2025-33476", proyecto:"Nuevo Proceso Hipotecario", mes:"2026-01", ingresos:9730.0, gastos:6173.01 },
+  { grupo:"Grupo Ibercaja", codProyecto:"2025-33476", proyecto:"Nuevo Proceso Hipotecario", mes:"2026-02", ingresos:9415.0, gastos:5907.3 },
+  { grupo:"Grupo Ibercaja", codProyecto:"2025-33476", proyecto:"Nuevo Proceso Hipotecario", mes:"2026-03", ingresos:6965.0, gastos:4005.07 },
+  { grupo:"Grupo Ibercaja", codProyecto:"2026-36282", proyecto:"Renting y Financiación Consumo", mes:"2026-02", ingresos:12348.0, gastos:4724.34 },
+  { grupo:"Grupo Ibercaja", codProyecto:"2026-36282", proyecto:"Renting y Financiación Consumo", mes:"2026-03", ingresos:7602.0, gastos:4724.34 },
+  { grupo:"Grupo Ignis", codProyecto:"2026-37409", proyecto:"Ignis - Onboarding App", mes:"2026-02", ingresos:350.0, gastos:211.24 },
+  { grupo:"Grupo Ignis", codProyecto:"2026-37409", proyecto:"Ignis - Onboarding App", mes:"2026-03", ingresos:11125.0, gastos:7193.65 },
+  { grupo:"Grupo Inditex", codProyecto:"2026-36772", proyecto:"Logistica Inditex", mes:"2026-01", ingresos:34026.67, gastos:12074.37 },
+  { grupo:"Grupo Inditex", codProyecto:"2026-36772", proyecto:"Logistica Inditex", mes:"2026-02", ingresos:32266.67, gastos:16720.29 },
+  { grupo:"Grupo Inditex", codProyecto:"2026-36772", proyecto:"Logistica Inditex", mes:"2026-03", ingresos:32266.67, gastos:16718.26 },
+  { grupo:"Grupo Inditex", codProyecto:"2026-36776", proyecto:"Nueva Plataforma IOP Producto", mes:"2026-01", ingresos:420276.34, gastos:278540.53 },
+  { grupo:"Grupo Inditex", codProyecto:"2026-36776", proyecto:"Nueva Plataforma IOP Producto", mes:"2026-02", ingresos:424032.85, gastos:263574.83 },
+  { grupo:"Grupo Inditex", codProyecto:"2026-36776", proyecto:"Nueva Plataforma IOP Producto", mes:"2026-03", ingresos:372667.89, gastos:266255.06 },
+  { grupo:"Grupo Inditex", codProyecto:"2026-36779", proyecto:"Partnership ITX Merken Digital", mes:"2026-01", ingresos:47858.6, gastos:38784.35 },
+  { grupo:"Grupo Inditex", codProyecto:"2026-36779", proyecto:"Partnership ITX Merken Digital", mes:"2026-02", ingresos:58998.0, gastos:41545.55 },
+  { grupo:"Grupo Inditex", codProyecto:"2026-36779", proyecto:"Partnership ITX Merken Digital", mes:"2026-03", ingresos:54003.4, gastos:42647.22 },
+  { grupo:"Grupo Junta Castilla La Mancha", codProyecto:"2025-34194", proyecto:"JCCM - Admin Electrónica V2", mes:"2026-01", ingresos:12571.61, gastos:11383.4 },
+  { grupo:"Grupo Junta Castilla La Mancha", codProyecto:"2025-34194", proyecto:"JCCM - Admin Electrónica V2", mes:"2026-02", ingresos:17446.69, gastos:15398.47 },
+  { grupo:"Grupo Junta Castilla La Mancha", codProyecto:"2025-34194", proyecto:"JCCM - Admin Electrónica V2", mes:"2026-03", ingresos:17526.18, gastos:14559.7 },
+  { grupo:"Grupo Junta Castilla La Mancha", codProyecto:"2025-35610", proyecto:"JCCM - Assessment SDCL", mes:"2026-01", ingresos:8450.0, gastos:5624.23 },
+  { grupo:"Grupo Junta Castilla La Mancha", codProyecto:"2025-35610", proyecto:"JCCM - Assessment SDCL", mes:"2026-02", ingresos:1500.0, gastos:0.0 },
+  { grupo:"Grupo Leroy Merlin", codProyecto:"2026-36770", proyecto:"Leroy Merlin Productos Digitales", mes:"2026-01", ingresos:8320.0, gastos:5195.12 },
+  { grupo:"Grupo Leroy Merlin", codProyecto:"2026-36770", proyecto:"Leroy Merlin Productos Digitales", mes:"2026-02", ingresos:7072.0, gastos:4387.35 },
+  { grupo:"Grupo Leroy Merlin", codProyecto:"2026-36770", proyecto:"Leroy Merlin Productos Digitales", mes:"2026-03", ingresos:9152.0, gastos:5195.12 },
+  { grupo:"Grupo Mango", codProyecto:"2026-36763", proyecto:"Asistencia Técnica Mango", mes:"2026-01", ingresos:37039.5, gastos:27589.72 },
+  { grupo:"Grupo Mango", codProyecto:"2026-36763", proyecto:"Asistencia Técnica Mango", mes:"2026-02", ingresos:48109.0, gastos:32157.5 },
+  { grupo:"Grupo Mango", codProyecto:"2026-36763", proyecto:"Asistencia Técnica Mango", mes:"2026-03", ingresos:52739.0, gastos:35868.89 },
+  { grupo:"Grupo Ministerio De Trabajo", codProyecto:"2023-20314", proyecto:"OITSS Plataforma Lince", mes:"2026-01", ingresos:0.0, gastos:94615.0 },
+  { grupo:"Grupo Ministerio De Trabajo", codProyecto:"2023-20314", proyecto:"OITSS Plataforma Lince", mes:"2026-02", ingresos:69.25, gastos:41338.47 },
+  { grupo:"Grupo Ministerio De Trabajo", codProyecto:"2023-20314", proyecto:"OITSS Plataforma Lince", mes:"2026-03", ingresos:0.0, gastos:7107.88 },
+  { grupo:"Grupo Ministerio Del Interior", codProyecto:"2025-35299", proyecto:"Mantenimiento Aplicaciones MIR", mes:"2026-01", ingresos:3599.0, gastos:2151.52 },
+  { grupo:"Grupo Ministerio Del Interior", codProyecto:"2025-35299", proyecto:"Mantenimiento Aplicaciones MIR", mes:"2026-02", ingresos:6684.3, gastos:6254.1 },
+  { grupo:"Grupo Ministerio Del Interior", codProyecto:"2025-35299", proyecto:"Mantenimiento Aplicaciones MIR", mes:"2026-03", ingresos:14988.5, gastos:10713.77 },
+  { grupo:"Grupo Mintur", codProyecto:"2025-32800", proyecto:"Mintur - IDP y API Manager", mes:"2026-01", ingresos:24172.0, gastos:8136.46 },
+  { grupo:"Grupo Mintur", codProyecto:"2025-32800", proyecto:"Mintur - IDP y API Manager", mes:"2026-02", ingresos:9970.0, gastos:9627.51 },
+  { grupo:"Grupo Mintur", codProyecto:"2025-33632", proyecto:"Mintur - Framework .NET", mes:"2026-02", ingresos:31102.5, gastos:3261.05 },
+  { grupo:"Grupo Mintur", codProyecto:"2026-37614", proyecto:"Mintur - Herramientas Desarrollo", mes:"2026-03", ingresos:7024.0, gastos:4412.88 },
+  { grupo:"Grupo Mrw", codProyecto:"2025-33747", proyecto:"MRW - Sincronización TTMM", mes:"2026-01", ingresos:5768.75, gastos:2049.96 },
+  { grupo:"Grupo Mrw", codProyecto:"2026-36998", proyecto:"MRW - Modernización TTMM", mes:"2026-02", ingresos:13978.22, gastos:5844.88 },
+  { grupo:"Grupo Mrw", codProyecto:"2026-36998", proyecto:"MRW - Modernización TTMM", mes:"2026-03", ingresos:28694.84, gastos:13295.57 },
+  { grupo:"Grupo Openbank", codProyecto:"2023-20669", proyecto:"Openbank", mes:"2026-01", ingresos:55040.0, gastos:39593.38 },
+  { grupo:"Grupo Openbank", codProyecto:"2023-20669", proyecto:"Openbank", mes:"2026-02", ingresos:64840.0, gastos:40699.18 },
+  { grupo:"Grupo Openbank", codProyecto:"2023-20669", proyecto:"Openbank", mes:"2026-03", ingresos:68000.0, gastos:45484.58 },
+  { grupo:"Grupo Prisa", codProyecto:"2025-34868", proyecto:"Prisa - Soporte Suscripciones", mes:"2026-02", ingresos:11507.0, gastos:4978.79 },
+  { grupo:"Grupo Prisa", codProyecto:"2025-34868", proyecto:"Prisa - Soporte Suscripciones", mes:"2026-03", ingresos:6697.0, gastos:5096.77 },
+  { grupo:"Grupo Prisa", codProyecto:"2026-36579", proyecto:"Espacio De Datos - Prisa AMS", mes:"2026-01", ingresos:13395.0, gastos:12652.58 },
+  { grupo:"Grupo Prisa", codProyecto:"2026-36579", proyecto:"Espacio De Datos - Prisa AMS", mes:"2026-02", ingresos:16728.0, gastos:10401.77 },
+  { grupo:"Grupo Prisa", codProyecto:"2026-36579", proyecto:"Espacio De Datos - Prisa AMS", mes:"2026-03", ingresos:17129.5, gastos:9917.65 },
+  { grupo:"Grupo Prisa", codProyecto:"2026-37705", proyecto:"CAPI Migración AWS", mes:"2026-03", ingresos:3745.0, gastos:2738.18 },
+  { grupo:"Grupo Roca", codProyecto:"2025-32817", proyecto:"Roca Group - Program Manager", mes:"2026-02", ingresos:18600.0, gastos:7559.31 },
+  { grupo:"Grupo Roca", codProyecto:"2025-32817", proyecto:"Roca Group - Program Manager", mes:"2026-03", ingresos:6600.0, gastos:4639.8 },
+  { grupo:"Grupo Roche", codProyecto:"2023-19137", proyecto:"Roche", mes:"2026-01", ingresos:104483.0, gastos:47115.01 },
+  { grupo:"Grupo Roche", codProyecto:"2023-19137", proyecto:"Roche", mes:"2026-02", ingresos:95313.0, gastos:70752.57 },
+  { grupo:"Grupo Roche", codProyecto:"2023-19137", proyecto:"Roche", mes:"2026-03", ingresos:132086.8, gastos:64963.65 },
+  { grupo:"Grupo Santander", codProyecto:"2023-19139", proyecto:"Santander E-labs - Retail", mes:"2026-01", ingresos:57680.55, gastos:40423.75 },
+  { grupo:"Grupo Santander", codProyecto:"2023-19139", proyecto:"Santander E-labs - Retail", mes:"2026-02", ingresos:57094.72, gastos:42993.09 },
+  { grupo:"Grupo Santander", codProyecto:"2023-19139", proyecto:"Santander E-labs - Retail", mes:"2026-03", ingresos:60077.24, gastos:41167.55 },
+  { grupo:"Grupo Santander", codProyecto:"2026-37450", proyecto:"Gestión De Campañas", mes:"2026-03", ingresos:7779.0, gastos:4934.62 },
+  { grupo:"Grupo Santander", codProyecto:"2026-37822", proyecto:"Santander Alemania - Migración APIs", mes:"2026-03", ingresos:9802.1, gastos:7049.43 },
+  { grupo:"Grupo Sese", codProyecto:"2026-36843", proyecto:"Migración KPIs Logística", mes:"2026-01", ingresos:7004.0, gastos:1832.91 },
+  { grupo:"Grupo Sese", codProyecto:"2026-36843", proyecto:"Migración KPIs Logística", mes:"2026-02", ingresos:10072.0, gastos:12158.59 },
+  { grupo:"Grupo Sese", codProyecto:"2026-36843", proyecto:"Migración KPIs Logística", mes:"2026-03", ingresos:8688.0, gastos:8785.02 },
+  { grupo:"Grupo Sgs", codProyecto:"2026-37818", proyecto:"SGS Global - Equipo", mes:"2026-03", ingresos:3801.0, gastos:2679.59 },
+  { grupo:"Grupo Synectic", codProyecto:"2023-21263", proyecto:"Synectic - Lote2b Web Middleware", mes:"2026-01", ingresos:6013.55, gastos:3096.09 },
+  { grupo:"Grupo Synectic", codProyecto:"2023-21263", proyecto:"Synectic - Lote2b Web Middleware", mes:"2026-02", ingresos:19301.95, gastos:9445.58 },
+  { grupo:"Grupo Synectic", codProyecto:"2023-21263", proyecto:"Synectic - Lote2b Web Middleware", mes:"2026-03", ingresos:16357.16, gastos:12273.5 },
+  { grupo:"Grupo Telefónica", codProyecto:"2025-35766", proyecto:"HSU - Historia Social Única La Rioja", mes:"2026-01", ingresos:2580.0, gastos:664.26 },
+  { grupo:"Grupo Telefónica", codProyecto:"2025-35766", proyecto:"HSU - Historia Social Única La Rioja", mes:"2026-02", ingresos:520.0, gastos:0.0 },
+  { grupo:"Grupo Unav", codProyecto:"2025-31903", proyecto:"Unav - Servicio AM", mes:"2026-01", ingresos:26619.55, gastos:10144.84 },
+  { grupo:"Grupo Unav", codProyecto:"2025-31903", proyecto:"Unav - Servicio AM", mes:"2026-02", ingresos:30432.2, gastos:11236.59 },
+  { grupo:"Grupo Unav", codProyecto:"2025-31903", proyecto:"Unav - Servicio AM", mes:"2026-03", ingresos:32874.4, gastos:13877.3 },
+  { grupo:"Grupo Viajes El Corte Ingles", codProyecto:"2026-37333", proyecto:"VECI - Motor IA TTOO", mes:"2026-02", ingresos:3996.0, gastos:5081.41 },
+  { grupo:"Grupo Viajes El Corte Ingles", codProyecto:"2026-37333", proyecto:"VECI - Motor IA TTOO", mes:"2026-03", ingresos:6210.0, gastos:2673.66 },
+  { grupo:"Grupo Viajes El Corte Ingles", codProyecto:"2026-37719", proyecto:"Kepler .NET Ancillaries - VECI", mes:"2026-03", ingresos:14164.62, gastos:7342.97 },
+  { grupo:"Grupo Vueling", codProyecto:"2026-36487", proyecto:"Vueling - Smart Mobile Omnichannel", mes:"2026-01", ingresos:1190.0, gastos:943.58 },
+  { grupo:"Grupo Vueling", codProyecto:"2026-36487", proyecto:"Vueling - Smart Mobile Omnichannel", mes:"2026-02", ingresos:1353.02, gastos:491.19 },
+  { grupo:"Interno", codProyecto:"Bjmicros", proyecto:"Bajas Y Ausencias", mes:"2026-01", ingresos:0, gastos:14965.06 },
+  { grupo:"Interno", codProyecto:"Bjmicros", proyecto:"Bajas Y Ausencias", mes:"2026-02", ingresos:0, gastos:28203.56 },
+  { grupo:"Interno", codProyecto:"Bjmicros", proyecto:"Bajas Y Ausencias", mes:"2026-03", ingresos:0, gastos:30131.35 },
+  { grupo:"Interno", codProyecto:"Gmicros", proyecto:"Genérica Microservicios", mes:"2026-01", ingresos:0, gastos:4897.17 },
+  { grupo:"Interno", codProyecto:"Gmicros", proyecto:"Genérica Microservicios", mes:"2026-02", ingresos:0, gastos:3322.41 },
+  { grupo:"Interno", codProyecto:"Gmicros", proyecto:"Genérica Microservicios", mes:"2026-03", ingresos:0, gastos:13569.21 },
+  { grupo:"Interno", codProyecto:"2025-33776", proyecto:"Offering - AAPP", mes:"2026-01", ingresos:0, gastos:4440.58 },
+  { grupo:"Interno", codProyecto:"2025-33776", proyecto:"Offering - AAPP", mes:"2026-02", ingresos:0, gastos:3394.79 },
+  { grupo:"Interno", codProyecto:"2025-33776", proyecto:"Offering - AAPP", mes:"2026-03", ingresos:0, gastos:1974.57 },
+  { grupo:"Interno", codProyecto:"2025-33778", proyecto:"Offering - Banca", mes:"2026-01", ingresos:0, gastos:4440.58 },
+  { grupo:"Interno", codProyecto:"2025-33778", proyecto:"Offering - Banca", mes:"2026-02", ingresos:0, gastos:3490.14 },
+  { grupo:"Interno", codProyecto:"2025-33778", proyecto:"Offering - Banca", mes:"2026-03", ingresos:0, gastos:1926.55 },
+  { grupo:"Interno", codProyecto:"2026-36830", proyecto:"Offering - Retail", mes:"2026-01", ingresos:0, gastos:4440.58 },
+  { grupo:"Interno", codProyecto:"2026-36830", proyecto:"Offering - Retail", mes:"2026-02", ingresos:0, gastos:3394.79 },
+  { grupo:"Interno", codProyecto:"2026-36830", proyecto:"Offering - Retail", mes:"2026-03", ingresos:0, gastos:1926.55 },
+];
+
+/* ═══════════════ 2. FÓRMULAS ═══════════════ */
+const feur = v => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(v);
+const fpct = v => v.toFixed(1)+'%';
+const fdlt = v => (v>=0?'+':'')+v.toFixed(1)+'%';
+const rent = (i,g) => i===0?0:((i-g)/i)*100;
+const vari = (a,b) => b===0?0:((a-b)/b)*100;
+
+/* ═══════════════ 3. ESTADO ═══════════════ */
+const MESES = [...new Set(RAW_DATA.map(d=>d.mes))].sort();
+const ALL_GRUPOS = [...new Set(RAW_DATA.map(d=>d.grupo))].sort();
+
+// Calcular ingresos totales por grupo (para ordenar sidebar)
+const ingPorGrupo = {};
+ALL_GRUPOS.forEach(g => {
+  ingPorGrupo[g] = RAW_DATA.filter(d=>d.grupo===g).reduce((s,d)=>s+d.ingresos,0);
+});
+const GRUPOS_SORTED = [...ALL_GRUPOS].sort((a,b) => ingPorGrupo[b] - ingPorGrupo[a]);
+
+const GRUPO_HBU = {
+  "Anysolution": "Utae",
+  "Clientes Smb": "Utae",
+  "Grupo  Construcia": "Servicios",
+  "Grupo Age": "AAPP",
+  "Grupo Alliance": "Alliance",
+  "Grupo Ayuntamiento De Barcelona": "Offering",
+  "Grupo Banca March": "Banca",
+  "Grupo Barcelo Avoris": "Utae",
+  "Grupo Barceló Hoteles": "Utae",
+  "Grupo Bbva": "Banca",
+  "Grupo Bsh": "Industria",
+  "Grupo Caixabank": "Offering",
+  "Grupo Carreras": "Servicios",
+  "Grupo Cirsa": "Utae",
+  "Grupo Comunidad De Madrid": "AAPP",
+  "Grupo Consum": "Servicios",
+  "Grupo Eedd Porcino": "Utae",
+  "Grupo El Corte Ingles": "ECI",
+  "Grupo Ferrovial": "Servicios",
+  "Grupo Fluidra": "Industria",
+  "Grupo Gobierno De Aragon": "AAPP",
+  "Grupo Gobierno De Navarra": "AAPP",
+  "Grupo Gobierno Vasco": "AAPP",
+  "Grupo Gobierno Vasco Sanidad": "AAPP",
+  "Grupo Godo": "Media",
+  "Grupo Ibercaja": "Banca",
+  "Grupo Iberdrola": "Utae",
+  "Grupo Ignis": "Utae",
+  "Grupo Inditex": "Inditex",
+  "Grupo Junta Castilla La Mancha": "AAPP",
+  "Grupo Junta De Castilla La Mancha": "AAPP",
+  "Grupo Leroy Merlin": "Retail",
+  "Grupo Mango": "Mango",
+  "Grupo Mapfre": "Banca",
+  "Grupo Ministerio De Trabajo": "AAPP",
+  "Grupo Ministerio Del Interior": "AAPP",
+  "Grupo Mintur": "AAPP",
+  "Grupo Mrw": "Servicios",
+  "Grupo Nordex": "Industria",
+  "Grupo Openbank": "Banca",
+  "Grupo Prisa": "Servicios",
+  "Grupo Roca": "Industria",
+  "Grupo Roche": "Industria",
+  "Grupo Sanitas Seguros": "Banca",
+  "Grupo Santa Lucia": "Offering",
+  "Grupo Santander": "Banca",
+  "Grupo Sese": "Servicios",
+  "Grupo Sgs": "Servicios",
+  "Grupo Soegs": "Utae",
+  "Grupo Synectic": "Servicios",
+  "Grupo Telefónica": "AAPP",
+  "Grupo Telefónica - Movistar Aapp": "AAPP",
+  "Grupo Unav": "Servicios",
+  "Grupo Viajes El Corte Ingles": "Utae",
+  "Grupo Vueling": "Utae",
+  "Interno": "Retail",
+};
+const ALL_HBUS = [...new Set(Object.values(GRUPO_HBU))].sort();
+const PALETA = [
+  {bg:'#eff4ff',txt:'#1d4ed8'},{bg:'#f0fdf4',txt:'#15803d'},{bg:'#fff7ed',txt:'#c2410c'},
+  {bg:'#fdf4ff',txt:'#7e22ce'},{bg:'#fefce8',txt:'#a16207'},{bg:'#fff1f2',txt:'#be123c'},
+  {bg:'#f0f9ff',txt:'#0369a1'},{bg:'#f7fee7',txt:'#3f6212'},{bg:'#faf5ff',txt:'#6b21a8'},
+];
+const GCOLOR = {};
+ALL_GRUPOS.forEach((g,i)=>{ const p=PALETA[i%PALETA.length]; GCOLOR[g]={bg:p.bg,txt:p.txt}; });
+
+let state = {
+  selectedGrupos: new Set(ALL_GRUPOS),
+  mes: MESES[MESES.length-1],
+  tblMes: null,
+  sortCol: 'i',
+  sortDir: 'desc',
+  margenFilter: 'all',
+  hbuFilter: null,       // null = todas las HBUs
+  exp: null,
+  search: ''
+};
+
+let lineInst=null, donutInst=null;
+
+/* ═══════════════ 4. HELPERS ═══════════════ */
+function getData() {
+  return RAW_DATA.filter(d => state.selectedGrupos.has(d.grupo));
+}
+function getGrupos() {
+  return ALL_GRUPOS.filter(g => {
+    if (!state.selectedGrupos.has(g)) return false;
+    if (state.hbuFilter && GRUPO_HBU[g] !== state.hbuFilter) return false;
+    return true;
+  });
+}
+
+/* HBU colors */
+const HBU_COLOR = {
+  'AAPP':      {bg:'#eff4ff',txt:'#1d4ed8'},
+  'Banca':     {bg:'#f0fdf4',txt:'#15803d'},
+  'Industria': {bg:'#fff7ed',txt:'#c2410c'},
+  'Retail':    {bg:'#fdf4ff',txt:'#7e22ce'},
+  'Servicios': {bg:'#fefce8',txt:'#a16207'},
+  'Inditex':   {bg:'#fff1f2',txt:'#be123c'},
+  'ECI':       {bg:'#f0f9ff',txt:'#0369a1'},
+  'Utae':      {bg:'#f7fee7',txt:'#3f6212'},
+  'Media':     {bg:'#faf5ff',txt:'#6b21a8'},
+  'Mango':     {bg:'#fff8f1',txt:'#9a3412'},
+  'Alliance':  {bg:'#f1f5f9',txt:'#475569'},
+  'Offering':  {bg:'#fdf2f8',txt:'#9d174d'},
+};
+
+function renderHbuBar() {
+  const bar = document.getElementById('hbuBar');
+  if (!bar) return;
+  bar.innerHTML = [null, ...ALL_HBUS].map(h => {
+    const active = state.hbuFilter === h;
+    const c = h ? HBU_COLOR[h] : null;
+    const style = active && c ? `background:${c.bg};color:${c.txt};border-color:${c.txt}` : '';
+    return `<button class="tbl-mes-btn ${!h?'tot':''} ${active?'active':''}"
+      style="${style}" onclick="setHbu('${h??''}')">${h??'Todas'}</button>`;
+  }).join('');
+}
+window.setHbu = function(h) {
+  state.hbuFilter = h || null;
+  state.exp = null;
+  renderHbuBar();
+  renderTabla();
+};
+function porMes(data) {
+  return MESES.map(mes => {
+    const r = data.filter(d=>d.mes===mes);
+    const i = r.reduce((s,x)=>s+x.ingresos,0), g = r.reduce((s,x)=>s+x.gastos,0);
+    return {mes, i, g, m:i-g, r:rent(i,g)};
+  });
+}
+function calcKPI(data) {
+  const serie = porMes(data);
+  if (state.mes === 'average') {
+    // Promedio de todos los meses disponibles
+    const n = serie.length;
+    const avgI = serie.reduce((s,m)=>s+m.i,0)/n;
+    const avgG = serie.reduce((s,m)=>s+m.g,0)/n;
+    return {i:avgI, g:avgG, m:avgI-avgG, r:rent(avgI,avgG), dI:null, dG:null, iAnt:null, gAnt:null, label:'Promedio mensual ('+n+' meses)'};
+  }
+  if (state.mes === null) {
+    const ti = serie.reduce((s,m)=>s+m.i,0), tg = serie.reduce((s,m)=>s+m.g,0);
+    return {i:ti, g:tg, m:ti-tg, r:rent(ti,tg), dI:null, dG:null, iAnt:null, gAnt:null, label:'Total acumulado'};
+  }
+  const idx = MESES.indexOf(state.mes);
+  const act = serie[idx], prev = idx>0?serie[idx-1]:null;
+  return {i:act.i, g:act.g, m:act.m, r:act.r,
+    dI: prev?vari(act.i,prev.i):null,
+    dG: prev?vari(act.g,prev.g):null,
+    iAnt: prev?prev.i:null, gAnt: prev?prev.g:null, label:''};
+}
+function rentCls(r) { return r>=25?'hi':r>=10?'md':'lo'; }
+function badge(v, inv=false) {
+  if(v===null) return `<span class="kpi-badge nu">sin ant.</span>`;
+  const ok = inv?v<0:v>=0;
+  return `<span class="kpi-badge ${v===0?'nu':ok?'up':'dn'}">${v>=0?'▲':'▼'} ${fdlt(v)}</span>`;
+}
+
+/* ═══════════════ 5. RENDER SIDEBAR ═══════════════ */
+function renderSidebar() {
+  const search = state.search.toLowerCase();
+  const list = document.getElementById('sbList');
+  const visible = GRUPOS_SORTED.filter(g => g.toLowerCase().includes(search));
+
+  list.innerHTML = visible.map(g => {
+    const checked = state.selectedGrupos.has(g);
+    const ing = ingPorGrupo[g];
+    return `<label class="sb-item ${checked?'checked':''}" title="${g}">
+      <input type="checkbox" ${checked?'checked':''} onchange="toggleGrupo('${g.replace(/'/g,"\\'")}', this.checked)">
+      <span class="sb-item-name">${g}</span>
+      <span class="sb-item-ing">${feur(ing)}</span>
+    </label>`;
+  }).join('');
+
+  document.getElementById('sbCount').textContent = state.selectedGrupos.size;
+  const n = state.selectedGrupos.size;
+  const all = ALL_GRUPOS.length;
+  document.getElementById('activeFilter').textContent =
+    n===all ? 'Todos los clientes' :
+    n===0 ? 'Ningún cliente' :
+    n===1 ? [...state.selectedGrupos][0] :
+    `${n} clientes seleccionados`;
+}
+
+window.toggleGrupo = function(g, checked) {
+  if(checked) state.selectedGrupos.add(g);
+  else state.selectedGrupos.delete(g);
+  renderSidebar();
+  renderEvol();
+  renderKPI();
+  renderCharts();
+  renderHbuBar();
+  renderTabla();
+};
+window.selectAll = function() {
+  state.selectedGrupos = new Set(ALL_GRUPOS);
+  renderSidebar();
+  renderEvol(); renderKPI(); renderCharts(); renderHbuBar(); renderTabla();
+};
+window.selectNone = function() {
+  state.selectedGrupos = new Set();
+  renderSidebar();
+  renderEvol(); renderKPI(); renderCharts(); renderHbuBar(); renderTabla();
+};
+
+document.getElementById('sbSearch').addEventListener('input', e => {
+  state.search = e.target.value;
+  renderSidebar();
+});
+
+/* ═══════════════ 6. RENDER MES SELECTOR ═══════════════ */
+function renderMes() {
+  const sel = document.getElementById('mesSelector');
+  const opciones = [...MESES, null, 'average'];
+  sel.innerHTML = opciones.map(m => {
+    const isTot=m===null, isAvg=m==='average', active=state.mes===m;
+    let lbl, cls='';
+    if(isTot){ lbl='Total acum.'; cls='special'; }
+    else if(isAvg){ lbl='Average'; cls='avg-btn'; }
+    else { const[y,mo]=m.split('-'); lbl=new Date(+y,+mo-1).toLocaleString('es-ES',{month:'short'}).replace('.','').replace(/^\w/,c=>c.toUpperCase()); }
+    return `<button class="mes-btn ${cls} ${active?'active':''}" data-m="${m??''}">${lbl}</button>`;
+  }).join('');
+  sel.querySelectorAll('.mes-btn').forEach(b=>b.addEventListener('click',()=>{
+    const v=b.dataset.m;
+    state.mes = v==='average'?'average':v||null;
+    renderMes(); renderEvol(); renderKPI();
+  }));
+}
+
+/* ═══════════════ 7. RENDER EVOL STRIP ═══════════════ */
+function renderEvol() {
+  const serie = porMes(getData());
+  const cols = serie.map((d,i) => {
+    const p=i>0?serie[i-1]:null;
+    const dI=p?vari(d.i,p.i):null, dG=p?vari(d.g,p.g):null;
+    const[y,m]=d.mes.split('-');
+    return {mes:d.mes, lbl:new Date(+y,+m-1).toLocaleString('es-ES',{month:'short'}).replace('.','').replace(/^\w/,c=>c.toUpperCase()), dI, dG, diff:(dI!==null&&dG!==null)?dI-dG:null};
+  });
+  // Average col
+  const avgI = serie.reduce((s,d)=>s+d.i,0)/serie.length;
+  const avgIPrev = serie.slice(0,-1).reduce((s,d)=>s+d.i,0)/(serie.length-1)||0;
+  const avgG = serie.reduce((s,d)=>s+d.g,0)/serie.length;
+  const avgGPrev = serie.slice(0,-1).reduce((s,d)=>s+d.g,0)/(serie.length-1)||0;
+  const avgDI = serie.length>1?vari(avgI,avgIPrev):null;
+  const avgDG = serie.length>1?vari(avgG,avgGPrev):null;
+  cols.push({mes:'average',lbl:'Avg',dI:avgDI,dG:avgDG,diff:(avgDI!==null&&avgDG!==null)?avgDI-avgDG:null});
+  // Total col
+  const fI=serie[0].i,lI=serie[serie.length-1].i,fG=serie[0].g,lG=serie[serie.length-1].g;
+  cols.push({mes:null,lbl:'Total',dI:vari(lI,fI),dG:vari(lG,fG),diff:vari(lI,fI)-vari(lG,fG)});
+
+  function ecell(val,sub,col){
+    const isAct=state.mes===col.mes;
+    const isAvg=col.mes==='average', isTot=col.mes===null;
+    const cls=[isAct?'act':'',isAvg?'avgt':'',isTot?'spc':''].join(' ');
+    if(val===null) return `<div class="ecell ${cls}"><span class="epct nu">—</span><span class="esub">${sub}</span></div>`;
+    const pcls=val>0?'up':val<0?'dn':'nu';
+    return `<div class="ecell ${cls}" onclick="selMes('${col.mes??''}')"><span class="epct ${pcls}">${val>=0?'+':''}${val.toFixed(1)}%</span><span class="esub">${sub}</span></div>`;
+  }
+  function diffcell(col){
+    const v=col.diff;
+    if(v===null) return `<span class="ediff zero">—</span>`;
+    const cls=v>0.2?'pos':v<-0.2?'neg':'zero';
+    return `<span class="ediff ${cls}" onclick="selMes('${col.mes??''}')" style="cursor:pointer">${v>=0?'+':''}${v.toFixed(1)}pp</span>`;
+  }
+  const thead=cols.map(c=>`<th>${c.lbl}</th>`).join('');
+  const irow=cols.map(c=>`<td>${ecell(c.dI,'ingresos',c)}</td>`).join('');
+  const grow=cols.map(c=>`<td>${ecell(c.dG,'gastos',c)}</td>`).join('');
+  const drow=cols.map(c=>`<td style="text-align:center;padding:2px">${diffcell(c)}</td>`).join('');
+  document.getElementById('evolStrip').innerHTML=`<table class="evol-table">
+    <thead><tr><th></th>${thead}</tr></thead>
+    <tbody>
+      <tr><td>Δ Ingresos</td>${irow}</tr>
+      <tr><td>Δ Gastos</td>${grow}</tr>
+      <tr class="edivider"><td colspan="${cols.length+1}"><div class="edivline"></div></td></tr>
+      <tr><td style="font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.04em">Diferencial</td>${drow}</tr>
+    </tbody></table>`;
+}
+window.selMes = function(v){ state.mes=v==='average'?'average':v||null; renderMes(); renderEvol(); renderKPI(); };
+
+/* ═══════════════ 8. RENDER KPI ═══════════════ */
+function renderKPI() {
+  const k = calcKPI(getData());
+  const cards=[
+    {lbl:'Ingresos',val:feur(k.i),ante:k.iAnt!=null?feur(k.iAnt):null,d:k.dI,inv:false,c:'c-ing'},
+    {lbl:'Gastos',val:feur(k.g),ante:k.gAnt!=null?feur(k.gAnt):null,d:k.dG,inv:true,c:'c-gas'},
+    {lbl:'Margen neto',val:feur(k.m),ante:null,d:null,c:'c-mrg'},
+    {lbl:'Rentabilidad %',val:fpct(k.r),ante:null,d:null,c:'c-rnt'},
+  ];
+  document.getElementById('kpiGrid').innerHTML=cards.map(c=>`
+    <div class="kpi-card ${c.c}">
+      <div class="kpi-lbl">${c.lbl}</div>
+      <div class="kpi-val">${c.val}</div>
+      ${c.ante!=null?`<div class="kpi-sep"></div><div class="kpi-vs"><span class="kpi-vs-lbl">ant. ${c.ante}</span>${badge(c.d,c.inv)}</div>`:''}
+    </div>`).join('');
+}
+
+/* ═══════════════ 9. RENDER CHARTS ═══════════════ */
+function renderCharts() {
+  const serie=porMes(getData());
+  const labels=serie.map(d=>{const[y,m]=d.mes.split('-');return new Date(+y,+m-1).toLocaleString('es-ES',{month:'short'}).replace('.','');});
+  const lctx=document.getElementById('lineChart').getContext('2d');
+  if(lineInst)lineInst.destroy();
+  lineInst=new Chart(lctx,{type:'line',data:{labels,datasets:[
+    {label:'Ingresos',data:serie.map(d=>d.i),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.07)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#2563eb',fill:true,tension:.35},
+    {label:'Gastos',data:serie.map(d=>d.g),borderColor:'#94a3b8',backgroundColor:'rgba(148,163,184,.07)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#94a3b8',fill:true,tension:.35},
+    {label:'Margen',data:serie.map(d=>d.m),borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,.05)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#16a34a',fill:true,tension:.35},
+  ]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1916',titleColor:'#f5f4f1',bodyColor:'#a09d97',padding:10,cornerRadius:8,callbacks:{label:ctx=>` ${ctx.dataset.label}: ${feur(ctx.raw)}`}}},scales:{x:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#a09d97',font:{size:10}}},y:{grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#a09d97',font:{size:10},callback:v=>feur(v)}}}}});
+  const ult=serie[serie.length-1];
+  document.getElementById('donutPct').textContent=fpct(ult.r);
+  const dctx=document.getElementById('donutChart').getContext('2d');
+  if(donutInst)donutInst.destroy();
+  donutInst=new Chart(dctx,{type:'doughnut',data:{datasets:[{data:[Math.max(0,ult.r),Math.max(0,100-ult.r)],backgroundColor:['#2563eb','#e2e8f0'],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:true,cutout:'72%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+}
+
+/* ═══════════════ 10. RENDER TABLA ═══════════════ */
+
+function renderTblMesBar() {
+  const bar = document.getElementById('tblMesBar');
+  const opts = [...MESES, null]; // null = Total acumulado
+  bar.innerHTML = opts.map(m => {
+    const isTot = m === null;
+    const active = state.tblMes === m;
+    let lbl;
+    if (isTot) lbl = 'Total';
+    else { const[y,mo]=m.split('-'); lbl=new Date(+y,+mo-1).toLocaleString('es-ES',{month:'short'}).replace('.','').replace(/^\w/,c=>c.toUpperCase()); }
+    return `<button class="tbl-mes-btn ${isTot?'tot':''} ${active?'active':''}" onclick="setTblMes('${m??''}')">${lbl}</button>`;
+  }).join('');
+}
+
+window.setTblMes = function(v) {
+  state.tblMes = v || null;
+  state.exp = null;
+  renderTblMesBar();
+  renderTabla();
+};
+
+window.setSort = function(col) {
+  if (state.sortCol === col) state.sortDir = state.sortDir === 'desc' ? 'asc' : 'desc';
+  else { state.sortCol = col; state.sortDir = 'desc'; }
+  renderTabla();
+};
+
+window.setMargenFilter = function(f) {
+  state.margenFilter = f;
+  ['fAll','fPos','fNeg'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(f==='all'?'fAll':f==='pos'?'fPos':'fNeg').classList.add('active');
+  state.exp = null;
+  renderTabla();
+};
+
+function updateSortIcons() {
+  ['i','gs','m','r','ev'].forEach(col => {
+    const el = document.getElementById('si-'+col);
+    const hd = document.getElementById('sh-'+col);
+    if (!el || !hd) return;
+    hd.classList.toggle('sort-active', state.sortCol === col);
+    el.textContent = state.sortCol === col ? (state.sortDir === 'desc' ? '▼' : '▲') : '⇅';
+  });
+}
+
+function renderTabla() {
+  renderTblMesBar();
+  updateSortIcons();
+
+  const grupos = getGrupos();
+  const targetMes = state.tblMes; // null = todos sumados
+  const prevMes = targetMes ? MESES[MESES.indexOf(targetMes)-1] : null;
+
+  const filas = grupos.map(g => {
+    let i, gs, iA;
+    if (targetMes) {
+      // Mes específico
+      const a = RAW_DATA.filter(d=>d.grupo===g&&d.mes===targetMes);
+      const p = prevMes ? RAW_DATA.filter(d=>d.grupo===g&&d.mes===prevMes) : [];
+      i  = a.reduce((s,d)=>s+d.ingresos,0);
+      gs = a.reduce((s,d)=>s+d.gastos,0);
+      iA = p.reduce((s,d)=>s+d.ingresos,0);
+    } else {
+      // Total acumulado
+      const all = RAW_DATA.filter(d=>d.grupo===g);
+      i  = all.reduce((s,d)=>s+d.ingresos,0);
+      gs = all.reduce((s,d)=>s+d.gastos,0);
+      iA = null;
+    }
+    const m = i - gs, r = rent(i,gs);
+    const ev = (targetMes && prevMes) ? vari(i,iA) : null;
+    return {g, i, gs, m, r, ev};
+  });
+
+  // Filtro positivo/negativo
+  const filtered = filas.filter(f =>
+    state.margenFilter === 'all' ? true :
+    state.margenFilter === 'pos' ? f.m >= 0 :
+    f.m < 0
+  );
+
+  // Ordenación
+  const col = state.sortCol, dir = state.sortDir;
+  filtered.sort((a,b) => {
+    const va = a[col] ?? -Infinity, vb = b[col] ?? -Infinity;
+    return dir === 'desc' ? vb - va : va - vb;
+  });
+
+  // Proyectos por grupo (según mes tabla)
+  const proys = g => {
+    const um = targetMes || MESES[MESES.length-1];
+    const pm = targetMes ? prevMes : MESES[MESES.length-2];
+    const ps = [...new Set(RAW_DATA.filter(d=>d.grupo===g).map(d=>d.codProyecto))];
+    return ps.map(cod => {
+      let pi, pgs;
+      if (targetMes) {
+        const a = RAW_DATA.find(d=>d.codProyecto===cod&&d.mes===um)||{};
+        const p = pm ? RAW_DATA.find(d=>d.codProyecto===cod&&d.mes===pm)||{} : {};
+        pi = a.ingresos||0; pgs = a.gastos||0;
+        const pev = pm&&p.ingresos!=null ? vari(pi,p.ingresos||0) : null;
+        return {cod, proyecto:a.proyecto||cod, i:pi, gs:pgs, m:pi-pgs, r:rent(pi,pgs), ev:pev};
+      } else {
+        const all = RAW_DATA.filter(d=>d.codProyecto===cod);
+        pi  = all.reduce((s,d)=>s+d.ingresos,0);
+        pgs = all.reduce((s,d)=>s+d.gastos,0);
+        const sample = all[0]||{};
+        return {cod, proyecto:sample.proyecto||cod, i:pi, gs:pgs, m:pi-pgs, r:rent(pi,pgs), ev:null};
+      }
+    });
+  };
+
+  document.getElementById('groupBody').innerHTML = filtered.map(f=>{
+    const c=GCOLOR[f.g]||{bg:'#f1efe8',txt:'#5f5e5a'};
+    const isExp=state.exp===f.g;
+    const projHtml=proys(f.g).map(p=>`<tr style="background:var(--surface)">
+      <td><div style="display:flex;flex-direction:column;gap:1px"><span class="proj-code">${p.cod}</span><span class="proj-name">${p.proyecto}</span></div></td>
+      <td>${feur(p.i)}</td><td>${feur(p.gs)}</td><td>${feur(p.m)}</td>
+      <td><span class="pill ${rentCls(p.r)}">${fpct(p.r)}</span></td>
+      <td>${p.ev!==null?`<span class="dlt ${p.ev>=0?'up':'dn'}">${fdlt(p.ev)}</span>`:'—'}</td>
+    </tr>`).join('');
+    return `<tr class="${isExp?'exp':''}" onclick="toggleExp('${f.g.replace(/'/g,"\\'")}')">
+      <td><div class="gname"><div class="gicon" style="background:${c.bg};color:${c.txt}">${f.g.slice(0,2).toUpperCase()}</div>${f.g}<i class="chev ${isExp?'open':''}">›</i></div></td>
+      <td>${feur(f.i)}</td><td>${feur(f.gs)}</td><td>${feur(f.m)}</td>
+      <td><span class="pill ${rentCls(f.r)}">${fpct(f.r)}</span></td>
+      <td>${f.ev!==null?`<span class="dlt ${f.ev>=0?'up':'dn'}">${fdlt(f.ev)}</span>`:'—'}</td>
+    </tr>
+    <tr class="proj-row ${isExp?'open':''}">
+      <td colspan="6" class="proj-cell"><div class="proj-inner">
+        <div class="proj-lbl">Proyectos · ${f.g}</div>
+        <table><thead><tr><th>Proyecto</th><th>Ingresos</th><th>Gastos</th><th>Margen</th><th>Rent.%</th><th>Evol.</th></tr></thead>
+        <tbody>${projHtml}</tbody></table>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+window.toggleExp = function(g){ state.exp=state.exp===g?null:g; renderTabla(); };
+
+/* ═══════════════ 11. INIT ═══════════════ */
+function init() {
+  renderSidebar();
+  renderMes();
+  renderEvol();
+  renderKPI();
+  renderCharts();
+  renderHbuBar();
+  renderTabla();
+}
+init();
+</script>
+</body>
+</html>
